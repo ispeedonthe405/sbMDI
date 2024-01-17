@@ -92,7 +92,6 @@ namespace sbMDI.wpf
         {
             MdiChild window = new(this);
             Children.Add(window);
-            ActivateWindow(window);
             return window;
         }
 
@@ -284,10 +283,10 @@ namespace sbMDI.wpf
 
                 Debug.WriteLine("adding " + window.Title);
                 Panel.SetZIndex(window, Children.Count);
-                ActivateWindow(window);
-                ClientArea.Children.Add(window);
-                UpdateButtonsStatus();
                 OnChildAdded(window);
+                ClientArea.Children.Add(window);
+                ActivateWindow(window);
+                UpdateButtonsStatus();                
             }
 
             else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
@@ -311,9 +310,9 @@ namespace sbMDI.wpf
                     ReassignZIndex();
                     ChooseNewActiveWindow();
                 }
-                ClientArea.Children.Remove(window);
-                UpdateButtonsStatus();
                 OnChildRemoved(window);
+                ClientArea.Children.Remove(window);
+                UpdateButtonsStatus();                
             }
         }
     }
