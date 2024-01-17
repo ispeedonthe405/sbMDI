@@ -3,9 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34408.163
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sbMDI.wpf", "sbMDI.wpf\sbMDI.wpf.csproj", "{E3378843-ED2E-4B62-AFBB-32A7FEBA6D31}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "sbMDI.wpf", "sbMDI.wpf\sbMDI.wpf.csproj", "{E3378843-ED2E-4B62-AFBB-32A7FEBA6D31}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{F08E74E0-EAA2-4F11-B4DE-C59D3E96F9DC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test", "Test\Test.csproj", "{F08E74E0-EAA2-4F11-B4DE-C59D3E96F9DC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5EC9856-334D-4D0B-B562-A8FAEA673402}"
+	ProjectSection(SolutionItems) = preProject
+		TODO.txt = TODO.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

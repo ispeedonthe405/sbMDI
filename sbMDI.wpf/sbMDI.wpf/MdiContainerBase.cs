@@ -1,23 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
-using System.Windows;
-using System.Windows.Media;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 
 namespace sbMDI.wpf
 {
 
     /// <summary>
-    /// The common base of the MdiContainer types
+    /// The common base of the MdiContainer types.
+    /// The window-frame buttons are not drawn on the child windows.
+    /// Instead, they're part of the container window.
     /// </summary>
     public abstract class MdiContainerBase : UserControl, INotifyPropertyChanged
     {
@@ -137,9 +133,10 @@ namespace sbMDI.wpf
         {
             Debug.WriteLine("Activating " + window.Title);
             ActiveWindow = window;
-            Panel.SetZIndex(ActiveWindow, Children.Count + 1);
+            ReassignZIndex();
             ActiveWindow.BringIntoView();
             ActiveWindow.Focus();
+            OnChildActivated(window);
         }
 
         private void MdiContainerBase_GotFocus(object sender, RoutedEventArgs e)
@@ -152,6 +149,15 @@ namespace sbMDI.wpf
             UpdateButtonsStatus();
         }
 
+        public double ClientAreaWidth()
+        {
+            return ClientArea.ActualWidth;
+        }
+
+        public double ClientAreaHeight()
+        {
+            return ClientArea.ActualHeight;
+        }
 
         protected void CreateButtonPanel()
         {
@@ -190,7 +196,7 @@ namespace sbMDI.wpf
             }
             if (ActiveWindow is not null)
             {
-                ActivateWindow(ActiveWindow);
+                Panel.SetZIndex(ActiveWindow, Children.Count + 1);
             }
         }
 
@@ -199,10 +205,9 @@ namespace sbMDI.wpf
             if (ActiveWindow is not null)
             {
                 Debug.WriteLine("Closing " + ActiveWindow.Title);
-                ClientArea.Children.Remove(ActiveWindow);
                 Children.Remove(ActiveWindow);
-            }
-            ChooseNewActiveWindow();
+                ChooseNewActiveWindow();
+            }            
         }
 
         private void ButtonMinimize_Click(object sender, RoutedEventArgs e)
@@ -243,6 +248,7 @@ namespace sbMDI.wpf
         protected abstract void OnResized(object sender, SizeChangedEventArgs e);
         protected abstract void OnChildAdded(MdiChild window);
         protected abstract void OnChildRemoved(MdiChild window);
+        protected abstract void OnChildActivated(MdiChild window);
 
         /// <summary>
         /// 
@@ -253,7 +259,7 @@ namespace sbMDI.wpf
         {
             foreach (var wnd in Children)
             {
-                wnd.Resize();
+                wnd.ReapplyWindowState();
             }
             OnResized(sender, e);
         }
@@ -265,17 +271,17 @@ namespace sbMDI.wpf
         /// <param name="e"></param>
         protected virtual void Children_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
-            if (e.NewItems is null)
-            {
-                return;
-            }
-            if (e.NewItems[0] is not MdiChild window)
-            {
-                return;
-            }
-
             if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
             {
+                if (e.NewItems is null)
+                {
+                    return;
+                }
+                if (e.NewItems[0] is not MdiChild window)
+                {
+                    return;
+                }
+
                 Debug.WriteLine("adding " + window.Title);
                 Panel.SetZIndex(window, Children.Count);
                 ActivateWindow(window);
@@ -286,6 +292,15 @@ namespace sbMDI.wpf
 
             else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
             {
+                if (e.OldItems is null)
+                {
+                    return;
+                }
+                if (e.OldItems[0] is not MdiChild window)
+                {
+                    return;
+                }
+
                 Debug.WriteLine("Removing " + window.Title);
                 if (Children.Count == 0)
                 {

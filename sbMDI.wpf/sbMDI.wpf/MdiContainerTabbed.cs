@@ -1,40 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
+
+
 
 namespace sbMDI.wpf
 {
+    /// <summary>
+    /// Why not just bind TabControl.ItemsSource to Container.Children?
+    /// The framework throws an exception, complaining about Visual element
+    /// already having a parent (Canvas ClientArea). 
+    /// 
+    /// So to populate the tabs in sync with the child windows, we have to abstract it. 
+    /// Either that, or there's some Jedi databinding trick I don't know about.
+    /// </summary>
+    internal class WindowTabItem
+    {
+        public MdiChild? Window { get; set; }
+    }
+
+    /// <summary>
+    /// An MDI-like container with tabs corresponding to each child window
+    /// </summary>
     public class MdiContainerTabbed : MdiContainerBase
     {
-        private DockPanel _TabPanel = new();
-        public DockPanel TabPanel { get => _TabPanel; }
-
-        private ObservableCollection<Button> _Tabs = [];
-        public ObservableCollection<Button> Tabs { get => _Tabs; }
-
-        public enum eTabBarPosition
-        {
-            Top,
-            Bottom,
-            Left,
-            Right
-        }
-        private eTabBarPosition _TabBarPosition = eTabBarPosition.Bottom;
-        public eTabBarPosition TabBarPosition
-        {
-            get => _TabBarPosition;
-            set
-            {
-                _TabBarPosition = value;
-                RestructureContentGrid();
-            }
-        }
+        private TabControl TabPanel = new();
+        private ObservableCollection<WindowTabItem> TabItems = [];
 
         private UInt32 _MaxTabWidth = 32;
         public UInt32 MaxTabWidth
@@ -43,7 +36,7 @@ namespace sbMDI.wpf
             set
             {
                 _MaxTabWidth = value;
-                AdjustTabDisplay();
+                OnPropertyChanged(nameof(MaxTabWidth));
             }
         }
 
@@ -54,7 +47,7 @@ namespace sbMDI.wpf
             set 
             { 
                 _TabPanelHeight = value;
-                AdjustTabDisplay();
+                OnPropertyChanged(nameof(TabPanelHeight));
             }
         }
 
@@ -62,38 +55,58 @@ namespace sbMDI.wpf
         public Brush TabPanelBrush
         {
             get => _TabPanelBrush;
-            set => _TabPanelBrush = value;
+            set
+            {
+                _TabPanelBrush = value;
+                OnPropertyChanged(nameof(TabPanelBrush));
+            }
         }
 
 
         public MdiContainerTabbed() : base()
         {
-            TabPanel.Background = TabPanelBrush;
+            Binding b1 = new(nameof(TabPanelBrush));
+            TabPanel.SetBinding(BackgroundProperty, b1);
+            TabPanel.ItemsSource = TabItems;
+            TabPanel.DisplayMemberPath = "Window.Title";
+            TabPanel.SelectionChanged += TabPanel_SelectionChanged;
+        }
+
+        private void TabPanel_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if(e.AddedItems is not null && e.AddedItems.Count > 0)
+            {
+                if (e.AddedItems[0] is WindowTabItem tab && tab.Window is not null)
+                {
+                    SetActiveWindow(tab.Window);
+                }
+            }
         }
 
         private void MdiContainerTabbed_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            BuildTabs();
-        }
-
-        protected override void CreateContentGrid()
-        {
-            TabPanel.LastChildFill = false;
-            RestructureContentGrid();
+            
         }
 
         /// <summary>
-        /// The layout grid and control-row selection depend on the chosen position of the tab bar
+        /// Being more granular with the content grid layout allows the tab bar position to change
+        /// at runtime without destroying the universe. Note that only the container controls are
+        /// wiped out and rebuilt. The child window collection isn't touched.
         /// </summary>
-        private void RestructureContentGrid()
+        protected override void CreateContentGrid()
+        {
+            RecreateContentGrid();
+        }
+        
+        private void RecreateContentGrid()
         {
             ContentGrid.Children.Clear();
             ContentGrid.RowDefinitions.Clear();
             ContentGrid.ColumnDefinitions.Clear();
 
-            switch (TabBarPosition)
+            switch (TabPanel.TabStripPlacement)
             {
-                case eTabBarPosition.Top:
+                case Dock.Top:
                     ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TabPanelHeight, GridUnitType.Pixel) });
                     ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
                     ContentGrid.RowDefinitions.Add(new RowDefinition());
@@ -108,7 +121,7 @@ namespace sbMDI.wpf
                     Grid.SetRow(ClientArea, 2);
                     break;
 
-                case eTabBarPosition.Bottom:
+                case Dock.Bottom:
                     ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
                     ContentGrid.RowDefinitions.Add(new RowDefinition());
                     ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TabPanelHeight, GridUnitType.Pixel) });
@@ -122,42 +135,6 @@ namespace sbMDI.wpf
                     ContentGrid.Children.Add(ClientArea);
                     Grid.SetRow(ClientArea, 1);
                     break;
-
-                case eTabBarPosition.Left:
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContentGrid.RowDefinitions.Add(new RowDefinition());
-                    break;
-
-                case eTabBarPosition.Right:
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContentGrid.RowDefinitions.Add(new RowDefinition());
-                    break;
-            }
-
-            BuildTabs();
-        }
-
-        /// <summary>
-        /// Whenever the tabs have a visual update
-        /// </summary>
-        private void AdjustTabDisplay()
-        {
-            foreach (var tab in Tabs)
-            {
-                if (tab.Width > MaxTabWidth)
-                {
-                    tab.Width = MaxTabWidth;
-                }
-            }
-        }
-
-        private void BuildTabs()
-        {
-            Tabs.Clear();
-
-            foreach (var child in Children)
-            {
-                // add tab
             }
         }
 
@@ -168,12 +145,25 @@ namespace sbMDI.wpf
 
         protected override void OnChildAdded(MdiChild window)
         {
-
+            TabItems.Add(new WindowTabItem() { Window = window });
         }
 
         protected override void OnChildRemoved(MdiChild window)
         {
+            var tab = TabItems.Where(i => i.Window == window).FirstOrDefault();
+            if(tab is not null)
+            {
+                TabItems.Remove(tab);
+            }
+        }
 
+        protected override void OnChildActivated(MdiChild window)
+        {
+            var tab = TabItems.Where(i => i.Window == window).FirstOrDefault();
+            if (tab is not null)
+            {
+                TabPanel.SelectedValue = tab;
+            }
         }
     }
 }

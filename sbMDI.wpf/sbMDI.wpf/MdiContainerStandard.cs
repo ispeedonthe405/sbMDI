@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows;
 
 namespace sbMDI.wpf
 {
+    /// <summary>
+    /// A very basic MDI container; essentially just a client area for child
+    /// windows to live in.
+    /// </summary>
     public class MdiContainerStandard : MdiContainerBase
     {
         public MdiContainerStandard() : base()
@@ -38,6 +37,11 @@ namespace sbMDI.wpf
         }
 
         protected override void OnResized(object sender, SizeChangedEventArgs e)
+        {
+
+        }
+
+        protected override void OnChildActivated(MdiChild window)
         {
 
         }
