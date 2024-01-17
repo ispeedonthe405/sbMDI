@@ -7,7 +7,8 @@ namespace sbMDI.wpf
     {
         public MdiContainerBase Container { get; private set; }
 
-        private string _Title = "untitled";
+        private static UInt32 windowCounter = 0;
+        private string _Title = "untitled" + windowCounter++.ToString();
         public string Title
         {
             get => _Title;
@@ -59,6 +60,7 @@ namespace sbMDI.wpf
         public MdiChild(MdiContainerBase container)
         {
             Container = container;
+            Focusable = true;
             ReapplyWindowState();
 
             Loaded += MdiChild_Loaded;
