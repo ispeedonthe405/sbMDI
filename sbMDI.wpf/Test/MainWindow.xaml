@@ -1,0 +1,34 @@
+﻿<Window x:Class="Test.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Test"
+        xmlns:mdi="clr-namespace:sbMDI.wpf;assembly=sbMDI.wpf"
+        mc:Ignorable="d"
+        Height="450" 
+        Width="800"
+        WindowStartupLocation="CenterScreen"
+        Title="MainWindow">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="22"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Button x:Name="btn_NewChild" Margin="2,2,2,2" Content="New MDI Child" Click="btn_NewChild_Click"/>
+        </StackPanel>
+        
+        <TabControl x:Name="MainTabs" Grid.Row="1">
+            <TabItem Header="Standard MDI">
+                <mdi:MdiContainerStandard x:Name="Standard"/>
+            </TabItem>
+            <TabItem Header="Tabbed MDI">
+                <mdi:MdiContainerTabbed x:Name="Tabbed"/>
+            </TabItem>
+        </TabControl>
+
+    </Grid>
+</Window>
