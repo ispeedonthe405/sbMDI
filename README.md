@@ -1,4 +1,8 @@
 # sbMDI
+
+PLEASE NOTE: At the present time this is still in early development.
+--------------------------------------------------------------------
+
 A simple .Net MDI library with multiple container types.
 
 The goal here is to provide an easily-used approach to approximating the MDI paradigm into modern Xaml/C# projects.
