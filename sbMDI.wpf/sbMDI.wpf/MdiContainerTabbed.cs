@@ -40,7 +40,7 @@ namespace sbMDI.wpf
             }
         }
 
-        private UInt32 _TabPanelHeight = 30;
+        private UInt32 _TabPanelHeight = 26;
         public UInt32 TabPanelHeight
         {
             get => _TabPanelHeight;
