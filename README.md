@@ -1,6 +1,5 @@
 # sbMDI
 
-PLEASE NOTE: At the present time this is still in early development.
 --------------------------------------------------------------------
 
 A simple .Net MDI library with multiple container types.
@@ -9,5 +8,7 @@ The goal here is to provide an easily-used approach to approximating the MDI par
 
 For now WPF is the only target, since I need this for a project I'm involved with. UWP and WinUI3 will come later.
 
-Incorporation is simple. See Test subproject for more details.
+Integration and usage are simple. See Test subproject for more details.
+
+Current status: Functional, not yet finished.
 
