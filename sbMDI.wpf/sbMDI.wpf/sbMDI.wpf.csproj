@@ -7,4 +7,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Page Remove="ThemeDefault.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="ThemeDefault.xaml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
 </Project>
