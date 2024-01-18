@@ -1,5 +1,4 @@
-1. For Tabbed container, allow for left/right placement of tab control
-2. Styling for the container frame controls (buttons, tabs)
-3. Minimal frame for MdiChild when not maximized, for dragging & resizing
-4. Tiling options for child windows (cascade, horizontal, vertical)
+- For Tabbed container, allow for left/right placement of tab control
+- Styling for the container frame controls (buttons, tabs)
+- Tiling options for child windows (cascade, horizontal, vertical)
 
