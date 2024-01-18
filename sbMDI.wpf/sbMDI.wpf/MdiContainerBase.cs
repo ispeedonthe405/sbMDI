@@ -258,7 +258,7 @@ namespace sbMDI.wpf
         {
             foreach (var wnd in Children)
             {
-                wnd.ReapplyWindowState();
+                wnd.ApplyWindowState();
             }
             OnResized(sender, e);
         }
