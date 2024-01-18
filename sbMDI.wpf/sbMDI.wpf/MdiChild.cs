@@ -102,6 +102,23 @@ namespace sbMDI.wpf
 
         private static void FocusedValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
+            if ((bool)e.NewValue == (bool)e.OldValue)
+                return;
+
+            MdiChild mdiChild = (MdiChild)sender;
+            if ((bool)e.NewValue)
+            {
+                mdiChild.Dispatcher.BeginInvoke(new Func<IInputElement, IInputElement>(Keyboard.Focus), System.Windows.Threading.DispatcherPriority.ApplicationIdle, mdiChild.Content);
+                mdiChild.RaiseEvent(new RoutedEventArgs(GotFocusEvent, mdiChild));
+            }
+            else
+            {
+                if (mdiChild.WindowState == WindowState.Maximized)
+                {
+                    //mdiChild.Unmaximize();
+                }
+                mdiChild.RaiseEvent(new RoutedEventArgs(LostFocusEvent, mdiChild));
+            }
         }
 
         /////////////////////////////
@@ -118,32 +135,44 @@ namespace sbMDI.wpf
         static MdiChild()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(MdiChild), new FrameworkPropertyMetadata(typeof(MdiChild)));
+            //Application.Current.Resources.MergedDictionaries.Add(
+            //    new ResourceDictionary
+            //    {
+            //        Source = new Uri(@"/sbMDI.wpf;component/ThemeDefault.xaml", UriKind.Relative)
+            //    });
         }
 
         public MdiChild(MdiContainerBase container)
         {
             Container = container;
-            Focusable = true;
-            //DefaultStyleKeyProperty.OverrideMetadata(typeof(MdiChild), new FrameworkPropertyMetadata(typeof(MdiChild)));
-            Application.Current.Resources.MergedDictionaries.Add(
-                new ResourceDictionary 
-                { 
-                    Source = new Uri(@"/sbMDI.wpf;component/ThemeDefault.xaml", UriKind.Relative) 
-                });
+            Focusable = false;            
 
             ApplyWindowState();
 
             Loaded += MdiChild_Loaded;
             Unloaded += MdiChild_Unloaded;
             GotFocus += MdiChild_GotFocus;
+            KeyDown += MdiChild_KeyDown;
+            MouseDown += MdiChild_MouseDown;
+        }
+
+        private void MdiChild_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            Focused = true;
+        }
+
+        private void MdiChild_KeyDown(object sender, KeyEventArgs e)
+        {
+            
         }
 
         /////////////////////////////
         #endregion Construction & Init
         ///////////////////////////////////////////////////////////
-        
+
         private void MdiChild_GotFocus(object sender, RoutedEventArgs e)
         {
+            Focus();
             Container.SetActiveWindow(this);
         }
 
@@ -300,8 +329,10 @@ namespace sbMDI.wpf
         /// <param name="e">The <see cref="System.Windows.Controls.Primitives.DragStartedEventArgs"/> instance containing the event data.</param>
         private void Thumb_DragStarted(object sender, DragStartedEventArgs e)
         {
-            //if (!Focused)
-            //    Focused = true;
+            if(!Focused)
+            {
+                Container.SetActiveWindow(this);
+            }
         }
 
         /// <summary>
