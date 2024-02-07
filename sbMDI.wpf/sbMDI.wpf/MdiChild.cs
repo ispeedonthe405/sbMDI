@@ -1,19 +1,40 @@
-﻿using System.Windows;
+﻿using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 
 namespace sbMDI.wpf
 {
-    public class MdiChild : UserControl
+    [ContentProperty("Content")]
+    public partial class MdiChild : UserControl
     {
-        public MdiContainerBase Container { get; private set; }
+        public MdiContainerBase Container { get; set; }
 
 
         ///////////////////////////////////////////////////////////
         #region Dependency Properties
         /////////////////////////////
+
+        public static readonly new DependencyProperty ContentProperty =
+            DependencyProperty.Register("Content", typeof(UserControl), typeof(MdiChild),
+                new UIPropertyMetadata(new PropertyChangedCallback(ContentValueChanged)));
+
+        public new UserControl Content
+        {
+            get => (UserControl)GetValue(ContentProperty);
+            set => SetValue(ContentProperty, value);
+        }
+
+        private static void ContentValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (sender is MdiChild window)
+            {
+                
+            }
+        }
 
         public static readonly DependencyProperty WindowStateProperty =
             DependencyProperty.Register("WindowState", typeof(WindowState), typeof(MdiChild),
@@ -27,12 +48,10 @@ namespace sbMDI.wpf
 
         private static void WindowStateValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
-            if (sender is not MdiChild window)
+            if (sender is MdiChild window)
             {
-                return;
-            }
-
-            window.ApplyWindowState();
+                window.ApplyWindowState();
+            }            
         }
 
         public static readonly DependencyProperty PositionProperty =
@@ -135,17 +154,24 @@ namespace sbMDI.wpf
         static MdiChild()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(MdiChild), new FrameworkPropertyMetadata(typeof(MdiChild)));
-            //Application.Current.Resources.MergedDictionaries.Add(
-            //    new ResourceDictionary
-            //    {
-            //        Source = new Uri(@"/sbMDI.wpf;component/ThemeDefault.xaml", UriKind.Relative)
-            //    });
+        }
+
+        // NOTE: This ctor is only a workaround for design-time
+        public MdiChild()
+        {
+            Container = new MdiContainerStandard();
+            CommonCtor();
         }
 
         public MdiChild(MdiContainerBase container)
         {
             Container = container;
-            Focusable = false;            
+            CommonCtor();
+        }
+
+        protected void CommonCtor()
+        {
+            Focusable = false;
 
             ApplyWindowState();
 
@@ -154,7 +180,27 @@ namespace sbMDI.wpf
             GotFocus += MdiChild_GotFocus;
             KeyDown += MdiChild_KeyDown;
             MouseDown += MdiChild_MouseDown;
+            DataContextChanged += MdiChild_DataContextChanged;
         }
+
+        private void MdiChild_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if(Content is not null)
+            {
+                Content.DataContext = DataContext;
+            }
+        }
+
+
+        /////////////////////////////
+        #endregion Construction & Init
+        ///////////////////////////////////////////////////////////
+
+
+
+        ///////////////////////////////////////////////////////////
+        #region Events
+        /////////////////////////////
 
         private void MdiChild_MouseDown(object sender, MouseButtonEventArgs e)
         {
@@ -163,23 +209,65 @@ namespace sbMDI.wpf
 
         private void MdiChild_KeyDown(object sender, KeyEventArgs e)
         {
-            
+            if (sender is not MdiChild window)
+            {
+                return;
+            }
+            switch (e.Key)
+            {
+                case Key.F4:
+                    if (e.KeyboardDevice.Modifiers == ModifierKeys.Control)
+                    {
+                        window.Close();
+                        e.Handled = true;
+                    }
+                    break;
+            }
         }
-
-        /////////////////////////////
-        #endregion Construction & Init
-        ///////////////////////////////////////////////////////////
 
         private void MdiChild_GotFocus(object sender, RoutedEventArgs e)
         {
             Focus();
-            Container.SetActiveWindow(this);
+            Content?.Focus();
+            Container?.SetActiveWindow(this);
         }
 
-        public void Close()
+        private void MdiChild_Loaded(object sender, RoutedEventArgs e)
         {
 
         }
+
+        private void MdiChild_Unloaded(object sender, RoutedEventArgs e)
+        {
+        }
+
+        protected virtual void OnActivated() { }
+        protected virtual void OnDeactivated() { }
+
+        /////////////////////////////
+        #endregion Events
+        ///////////////////////////////////////////////////////////
+        
+
+
+        ///////////////////////////////////////////////////////////
+        #region Window Interface
+        /////////////////////////////
+
+        public void Close()
+        {
+            Container?.CloseChildWindow(this);
+        }
+
+        /////////////////////////////
+        #endregion Window Interface
+        ///////////////////////////////////////////////////////////
+
+
+
+        ///////////////////////////////////////////////////////////
+        #region Window / Framework Internal
+        /////////////////////////////
 
         public void ApplyWindowState()
         {
@@ -188,28 +276,25 @@ namespace sbMDI.wpf
                 case WindowState.Normal:
                     {
                         Position = new Point(0, 0);
-                        Width = Container.ClientAreaWidth() / 3;
-                        Height = Container.ClientAreaHeight() / 3;
+                        if (Container is not null)
+                        {
+                            Width = Container.ClientAreaWidth / 3;
+                            Height = Container.ClientAreaHeight / 3;
+                        }
                     }
                     break;
 
                 case WindowState.Maximized:
                     {
                         Position = new Point(0, 0);
-                        Width = Container.ClientAreaWidth();
-                        Height = Container.ClientAreaHeight();
+                        if (Container is not null)
+                        {
+                            Width = Container.ClientAreaWidth;
+                            Height = Container.ClientAreaHeight;
+                        }
                     }
                     break;
             }
-        }
-
-        private void MdiChild_Loaded(object sender, RoutedEventArgs e)
-        {
-            
-        }
-
-        private void MdiChild_Unloaded(object sender, RoutedEventArgs e)
-        {
         }
 
         public override void OnApplyTemplate()
@@ -331,7 +416,7 @@ namespace sbMDI.wpf
         {
             if(!Focused)
             {
-                Container.SetActiveWindow(this);
+                Container?.SetActiveWindow(this);
             }
         }
 
@@ -445,8 +530,8 @@ namespace sbMDI.wpf
 
             double newLeft = Position.X + e.HorizontalChange;
             double newTop = Position.Y + e.VerticalChange;
-            double rightBoundary = (Container.ClientAreaWidth() - Width);
-            double bottomBoundary = (Container.ClientAreaHeight() - Height);
+            double rightBoundary = (Container.ClientAreaWidth - Width);
+            double bottomBoundary = (Container.ClientAreaHeight - Height);
 
             if (newLeft < 0)
             {
@@ -470,5 +555,9 @@ namespace sbMDI.wpf
 
             //Container.InvalidateSize();
         }
+
+        /////////////////////////////
+        #endregion Window / Framework Internal
+        ///////////////////////////////////////////////////////////
     }
 }

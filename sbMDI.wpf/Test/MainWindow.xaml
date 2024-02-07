@@ -26,7 +26,7 @@
                 <mdi:MdiContainerStandard x:Name="Standard"/>
             </TabItem>
             <TabItem Header="Tabbed MDI">
-                <mdi:MdiContainerTabbed x:Name="Tabbed"/>
+                <mdi:MdiContainerTabbed x:Name="Tabbed" TabStripPlacement="Bottom"/>
             </TabItem>
         </TabControl>
 

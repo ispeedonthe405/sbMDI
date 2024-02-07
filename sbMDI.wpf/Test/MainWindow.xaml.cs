@@ -14,13 +14,14 @@ namespace Test
             InitializeComponent();
         }
 
+        static UInt32 id = 0;
         private void btn_NewChild_Click(object sender, RoutedEventArgs e)
         {
             var tab = (TabItem)MainTabs.SelectedItem;
             if(tab is not null)
             {
                 var container = tab.Content as MdiContainerBase;
-                container?.NewChildWindow();
+                container?.NewChildWindow("Window " +  id++.ToString());                
             }            
         }
     }

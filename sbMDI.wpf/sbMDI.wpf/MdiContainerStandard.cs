@@ -14,15 +14,15 @@ namespace sbMDI.wpf
 
         }
 
-        protected override void CreateContentGrid()
+        protected override void CreateContainerGrid()
         {
-            ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-            ContentGrid.RowDefinitions.Add(new RowDefinition());
+            ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+            ContainerGrid.RowDefinitions.Add(new RowDefinition());
 
-            ContentGrid.Children.Add(ButtonPanel);
+            ContainerGrid.Children.Add(ButtonPanel);
             Grid.SetRow(ButtonPanel, 0);
 
-            ContentGrid.Children.Add(ClientArea);
+            ContainerGrid.Children.Add(ClientArea);
             Grid.SetRow(ClientArea, 1);
         }
 

@@ -26,6 +26,14 @@ namespace sbMDI.wpf
     /// </summary>
     public class MdiContainerTabbed : MdiContainerBase
     {
+        private StackPanel MainPanel = 
+            new() 
+            { 
+                Orientation = Orientation.Vertical, 
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+            };
+
         private TabControl TabPanel = new();
         private ObservableCollection<WindowTabItem> TabItems = [];
 
@@ -40,33 +48,36 @@ namespace sbMDI.wpf
             }
         }
 
-        private UInt32 _TabPanelHeight = 26;
-        public UInt32 TabPanelHeight
+        private static GridLength _SingleTabPanelHeight = new(24, GridUnitType.Pixel);
+        public GridLength SingleTabPanelHeight
         {
-            get => _TabPanelHeight;
+            get => _SingleTabPanelHeight;
             set 
-            { 
-                _TabPanelHeight = value;
-                OnPropertyChanged(nameof(TabPanelHeight));
+            {
+                _SingleTabPanelHeight = value;
+                OnPropertyChanged(nameof(SingleTabPanelHeight));
             }
         }
 
-        protected Brush _TabPanelBrush = SystemColors.MenuBarBrush;
-        public Brush TabPanelBrush
+        private Dock _TabStripPlacement = Dock.Bottom;
+        public Dock TabStripPlacement
         {
-            get => _TabPanelBrush;
+            get => _TabStripPlacement;
             set
             {
-                _TabPanelBrush = value;
-                OnPropertyChanged(nameof(TabPanelBrush));
+                _TabStripPlacement = value;
+                TabPanel.TabStripPlacement = value;
+                OnPropertyChanged(nameof(TabStripPlacement));
             }
         }
+
+        private RowDefinition TabRow = new() { Height = _SingleTabPanelHeight };
 
 
         public MdiContainerTabbed() : base()
         {
-            Binding b1 = new(nameof(TabPanelBrush));
-            TabPanel.SetBinding(BackgroundProperty, b1);
+            TabPanel.Height = 26;
+            TabPanel.ClipToBounds = false;
             TabPanel.ItemsSource = TabItems;
             TabPanel.DisplayMemberPath = "Window.Title";
             TabPanel.SelectionChanged += TabPanel_SelectionChanged;
@@ -93,50 +104,51 @@ namespace sbMDI.wpf
         /// at runtime without destroying the universe. Note that only the container controls are
         /// wiped out and rebuilt. The child window collection isn't touched.
         /// </summary>
-        protected override void CreateContentGrid()
+        protected override void CreateContainerGrid()
         {
             RecreateContentGrid();
         }
-        
+
         private void RecreateContentGrid()
         {
-            ContentGrid.Children.Clear();
-            ContentGrid.RowDefinitions.Clear();
-            ContentGrid.ColumnDefinitions.Clear();
+            ContainerGrid.Children.Clear();
+            ContainerGrid.RowDefinitions.Clear();
+            ContainerGrid.ColumnDefinitions.Clear();
 
-            switch (TabPanel.TabStripPlacement)
+            switch (TabStripPlacement)
             {
                 case Dock.Top:
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TabPanelHeight, GridUnitType.Pixel) });
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContentGrid.RowDefinitions.Add(new RowDefinition());
+                    ContainerGrid.RowDefinitions.Add(TabRow);
+                    ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+                    ContainerGrid.RowDefinitions.Add(new RowDefinition());
 
-                    ContentGrid.Children.Add(TabPanel);
+                    ContainerGrid.Children.Add(TabPanel);
                     Grid.SetRow(TabPanel, 0);
 
-                    ContentGrid.Children.Add(ButtonPanel);
+                    ContainerGrid.Children.Add(ButtonPanel);
                     Grid.SetRow(ButtonPanel, 1);
 
-                    ContentGrid.Children.Add(ClientArea);
+                    ContainerGrid.Children.Add(ClientArea);
                     Grid.SetRow(ClientArea, 2);
                     break;
 
                 case Dock.Bottom:
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContentGrid.RowDefinitions.Add(new RowDefinition());
-                    ContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TabPanelHeight, GridUnitType.Pixel) });
+                    ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+                    ContainerGrid.RowDefinitions.Add(new RowDefinition());
+                    ContainerGrid.RowDefinitions.Add(TabRow);
 
-                    ContentGrid.Children.Add(TabPanel);
+                    ContainerGrid.Children.Add(TabPanel);
                     Grid.SetRow(TabPanel, 2);
 
-                    ContentGrid.Children.Add(ButtonPanel);
+                    ContainerGrid.Children.Add(ButtonPanel);
                     Grid.SetRow(ButtonPanel, 0);
 
-                    ContentGrid.Children.Add(ClientArea);
+                    ContainerGrid.Children.Add(ClientArea);
                     Grid.SetRow(ClientArea, 1);
                     break;
             }
         }
+    
 
         protected override void OnResized(object sender, SizeChangedEventArgs e)
         {
@@ -164,6 +176,16 @@ namespace sbMDI.wpf
             {
                 TabPanel.SelectedValue = tab;
             }
+        }
+
+        /// <summary>
+        /// TabControl automatically resizes itself into new rows when the tab
+        /// count increases. Here we're making sure that the grid row the control
+        /// lives in dynamically resizes along with it.
+        /// </summary>
+        private void AdjustTabPanel()
+        {
+            
         }
     }
 }
