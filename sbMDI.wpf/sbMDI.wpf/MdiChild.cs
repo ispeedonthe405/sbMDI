@@ -51,6 +51,7 @@ namespace sbMDI.wpf
             if (sender is MdiChild window)
             {
                 window.ApplyWindowState();
+                window.WindowStateChanged?.Invoke(sender, new(window.WindowState));
             }            
         }
 
@@ -146,6 +147,41 @@ namespace sbMDI.wpf
 
 
 
+        ///////////////////////////////////////////////////////////
+        #region Properties
+        /////////////////////////////
+
+        private Button? ButtonMinimize;
+        private Button? ButtonMaximize;
+        private Button? ButtonClose;
+        private StackPanel? ButtonsPanel;
+
+
+        /////////////////////////////
+        #endregion Properties
+        ///////////////////////////////////////////////////////////
+
+
+
+
+        ///////////////////////////////////////////////////////////
+        #region Events
+        /////////////////////////////
+
+        public static readonly RoutedEvent ClosingEvent =
+            EventManager.RegisterRoutedEvent("Closing", RoutingStrategy.Bubble, typeof(ClosingEventArgs), typeof(MdiChild));
+
+        public static readonly RoutedEvent ClosedEvent =
+            EventManager.RegisterRoutedEvent("Closed", RoutingStrategy.Bubble, typeof(RoutedEventArgs), typeof(MdiChild));
+
+        public event WindowStateEventHandler? WindowStateChanged;
+
+        /////////////////////////////
+        #endregion Events
+        ///////////////////////////////////////////////////////////
+
+
+
 
         ///////////////////////////////////////////////////////////
         #region Construction & Init
@@ -156,7 +192,7 @@ namespace sbMDI.wpf
             DefaultStyleKeyProperty.OverrideMetadata(typeof(MdiChild), new FrameworkPropertyMetadata(typeof(MdiChild)));
         }
 
-        // NOTE: This ctor is only a workaround for design-time
+        // NOTE: This ctor is only a crutch for design-time
         public MdiChild()
         {
             Container = new MdiContainerStandard();
@@ -301,6 +337,26 @@ namespace sbMDI.wpf
         {
             base.OnApplyTemplate();
 
+            ButtonMinimize = (Button)Template.FindName("MinimizeButton", this);
+            ButtonMaximize = (Button)Template.FindName("MaximizeButton", this);
+            ButtonClose = (Button)Template.FindName("CloseButton", this);
+            ButtonsPanel = (StackPanel)Template.FindName("ButtonsPanel", this);
+
+            if (ButtonMinimize is not null)
+            {
+                ButtonMinimize.Click += ButtonMinimize_Click;
+            }
+
+            if (ButtonMaximize is not null)
+            {
+                ButtonMaximize.Click += ButtonMaximize_Click;
+            }
+
+            if (ButtonClose != null)
+            {
+                ButtonClose.Click += ButtonClose_Click;
+            }
+
             Thumb dragThumb = (Thumb)Template.FindName("DragThumb", this);
 
             if (dragThumb != null)
@@ -404,6 +460,43 @@ namespace sbMDI.wpf
 
                     //Container.InvalidateSize();
                 };
+            }
+        }
+
+        private void ButtonClose_Click(object sender, RoutedEventArgs e)
+        {
+            ClosingEventArgs eventArgs = new ClosingEventArgs(ClosingEvent);
+            RaiseEvent(eventArgs);
+
+            if (eventArgs.Cancel)
+                return;
+
+            Close();
+
+            RaiseEvent(new RoutedEventArgs(ClosedEvent));
+        }
+
+        private void ButtonMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            else
+            {
+                WindowState = WindowState.Maximized;
+            }
+        }
+
+        private void ButtonMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+            else
+            {
+                WindowState = WindowState.Minimized;
             }
         }
 

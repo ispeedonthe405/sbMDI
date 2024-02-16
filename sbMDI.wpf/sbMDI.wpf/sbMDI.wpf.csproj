@@ -8,10 +8,41 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\Close.png" />
+    <None Remove="Images\Maximize.png" />
+    <None Remove="Images\MaximizedClose.png" />
+    <None Remove="Images\MaximizedMinimize.png" />
+    <None Remove="Images\MaximizedRestore.png" />
+    <None Remove="Images\Minimize.png" />
+    <None Remove="Images\Restore.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Page Remove="ThemeDefault.xaml" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Images\Close.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\Maximize.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\MaximizedClose.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\MaximizedMinimize.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\MaximizedRestore.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\Minimize.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Images\Restore.png">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Resource>
     <Resource Include="ThemeDefault.xaml">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Resource>

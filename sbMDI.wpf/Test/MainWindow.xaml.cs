@@ -21,7 +21,8 @@ namespace Test
             if(tab is not null)
             {
                 var container = tab.Content as MdiContainerBase;
-                container?.NewChildWindow("Window " +  id++.ToString());                
+                string title = string.Format("Window {0} with a really long string for a title", id++.ToString());
+                container?.NewChildWindow(title);
             }            
         }
     }

@@ -1,12 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Media;
 
 namespace sbMDI.wpf
 {
@@ -18,18 +14,26 @@ namespace sbMDI.wpf
     /// </summary>
     public abstract class MdiContainerBase : UserControl, INotifyPropertyChanged
     {
-
         ///////////////////////////////////////////////////////////
         #region INotifyPropertyChanged
         /////////////////////////////
 
         public event PropertyChangedEventHandler? PropertyChanged;
+        
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = "")
         {
-            if (PropertyChanged is not null)
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        protected void SetField<TField>(ref TField field, TField value, string propertyName)
+        {
+            if (EqualityComparer<TField>.Default.Equals(field, value))
             {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+                return;
             }
+
+            field = value;
+            OnPropertyChanged(propertyName);
         }
 
         /////////////////////////////
@@ -42,7 +46,7 @@ namespace sbMDI.wpf
         #region Events / Actions
         /////////////////////////////
 
-        public event Action<MdiChild, MdiChild> ActiveChildChangedEvent;
+        public event Action<MdiChild, MdiChild>? ActiveChildChangedEvent;
         
         
         /////////////////////////////
@@ -58,13 +62,10 @@ namespace sbMDI.wpf
         protected ObservableCollection<MdiChild> Children { get; } = [];
 
         private Grid _ContainerGrid = new();
-        protected Grid ContainerGrid { get => _ContainerGrid; }
-
-        private DockPanel _ButtonPanel = new();
-        protected DockPanel ButtonPanel { get => _ButtonPanel; }
+        protected Grid ContainerGrid { get => _ContainerGrid; set => _ContainerGrid = value; }
 
         private Canvas _ClientArea = new();
-        protected Canvas ClientArea { get => _ClientArea; }
+        protected Canvas ClientArea { get => _ClientArea; set => _ClientArea = value; }
 
         public double ClientAreaWidth { get => ClientArea.ActualWidth; }
 
@@ -72,28 +73,6 @@ namespace sbMDI.wpf
 
         public Size ClientAreaSize { get => new(ClientAreaWidth, ClientAreaHeight); }
         
-
-        protected Brush _WindowBrush = SystemColors.WindowBrush;
-        public Brush WindowBrush
-        {
-            get => _WindowBrush;
-            set { _WindowBrush = value; OnPropertyChanged(nameof(WindowBrush)); }
-        }
-
-        protected Brush _ClientAreaBrush = SystemColors.AppWorkspaceBrush;
-        public Brush ClientAreaBrush
-        {
-            get => _ClientAreaBrush;
-            set { _ClientAreaBrush = value; OnPropertyChanged(nameof(ClientAreaBrush)); }
-        }
-
-        protected Brush _ButtonPanelBrush = SystemColors.MenuBarBrush;
-        public Brush ButtonPanelBrush
-        {
-            get => _ButtonPanelBrush;
-            set { _ButtonPanelBrush = value; OnPropertyChanged(nameof(ButtonPanelBrush)); }
-        }
-
         public static readonly DependencyProperty ActiveMdiChildProperty =
             DependencyProperty.Register("ActiveMdiChild", typeof(MdiChild), typeof(MdiContainerBase),
             new UIPropertyMetadata(null, new PropertyChangedCallback(ActiveMdiChildValueChanged)));
@@ -113,8 +92,10 @@ namespace sbMDI.wpf
                 return;
             }
 
-            container.ActiveChildChangedEvent(newChild, oldChild);
-
+            if (container.ActiveChildChangedEvent is not null)
+            {
+                container.ActiveChildChangedEvent(newChild, oldChild);
+            }
 
             if (oldChild != null && oldChild.WindowState == WindowState.Maximized)
             {
@@ -148,6 +129,7 @@ namespace sbMDI.wpf
 
         protected double WindowOffset = 10.0;
 
+        protected StackPanel ButtonsPanel = new();
         protected Button ButtonClose = new();
         protected Button ButtonMinimize = new();
         protected Button ButtonMaximize = new();
@@ -174,13 +156,6 @@ namespace sbMDI.wpf
 
         public MdiContainerBase()
         {
-            Binding b1 = new(nameof(WindowBrush));
-            SetBinding(BackgroundProperty, b1);
-            Binding b2 = new(nameof(ClientAreaBrush));
-            ClientArea.SetBinding(BackgroundProperty, b2);
-            Binding b3 = new(nameof(ButtonPanelBrush));
-            ButtonPanel.SetBinding(BackgroundProperty, b3);
-
             Children.CollectionChanged += Children_CollectionChanged;
             SizeChanged += MdiContainerBase_SizeChanged;
             Loaded += MdiContainerBase_Loaded;
@@ -188,33 +163,25 @@ namespace sbMDI.wpf
             MdiChildTitleChanged += MdiContainerBase_MdiChildTitleChanged;
 
             CreateContainerGrid();
-            CreateButtonPanel();
             Content = ContainerGrid;
         }
 
-        protected void CreateButtonPanel()
+        public override void OnApplyTemplate()
         {
-            ButtonPanel.LastChildFill = false;
-            ButtonPanel.Children.Clear();
+            base.OnApplyTemplate();
+            ContainerGrid = (Grid)Template.FindName("ContainerGrid", this);
+            ClientArea = (Canvas)Template.FindName("ClientArea", this);
+            ButtonsPanel = (StackPanel)Template.FindName("ButtonsPanel", this);
+            ButtonMinimize = (Button)Template.FindName("MinimizeButton", this);
+            ButtonMaximize = (Button)Template.FindName("MaximizeButton", this);
+            ButtonClose = (Button)Template.FindName("CloseButton", this);
 
-            // These ugly buttons are temporary. I'll theme them later.
-            ButtonClose.Content = " X ";
-            ButtonClose.Click += ButtonClose_Click;
-            ButtonClose.Margin = new Thickness(3, 1, 3, 1);
-            DockPanel.SetDock(ButtonClose, Dock.Right);
-            ButtonPanel.Children.Add(ButtonClose);
-
-            ButtonMaximize.Content = " [] ";
-            ButtonMaximize.Click += ButtonMaximize_Click;
-            ButtonMaximize.Margin = new Thickness(3, 1, 3, 1);
-            DockPanel.SetDock(ButtonMaximize, Dock.Right);
-            ButtonPanel.Children.Add(ButtonMaximize);
-
-            ButtonMinimize.Content = " - ";
             ButtonMinimize.Click += ButtonMinimize_Click;
-            ButtonMinimize.Margin = new Thickness(3, 1, 3, 1);
-            DockPanel.SetDock(ButtonMinimize, Dock.Right);
-            ButtonPanel.Children.Add(ButtonMinimize);
+            ButtonMaximize.Click += ButtonMaximize_Click;
+            ButtonClose.Click += ButtonClose_Click;
+
+            // Initial button panel state
+            ButtonsPanel.Visibility = Visibility.Collapsed;
         }
 
         /////////////////////////////
@@ -373,7 +340,7 @@ namespace sbMDI.wpf
         {
             if (ActiveMdiChild is not null)
             {
-                Debug.WriteLine("Closing " + ActiveMdiChild.Title);
+                //Debug.WriteLine("Closing " + ActiveMdiChild.Title);
                 Children.Remove(ActiveMdiChild);
                 ChooseNewActiveWindow();
             }
@@ -419,11 +386,12 @@ namespace sbMDI.wpf
                     return;
                 }
 
-                Debug.WriteLine("adding " + window.Title);
+                //Debug.WriteLine("adding " + window.Title);
                 if(window.Container is null)
                 {
                     window.Container = this;
                 }
+                window.WindowStateChanged += Child_WindowStateChanged;
                 Panel.SetZIndex(window, Children.Count);
                 OnChildAdded(window);
                 ClientArea.Children.Add(window);
@@ -442,7 +410,7 @@ namespace sbMDI.wpf
                     return;
                 }
 
-                Debug.WriteLine("Removing " + window.Title);
+                //Debug.WriteLine("Removing " + window.Title);
                 if (Children.Count == 0)
                 {
                     ActiveMdiChild = null;
@@ -458,22 +426,39 @@ namespace sbMDI.wpf
             }
         }
 
+        private void Child_WindowStateChanged(object sender, WindowStateEventArgs e)
+        {
+            if(e.State == WindowState.Maximized)
+            {
+                ButtonsPanel.Visibility = Visibility.Visible;
+                return;
+            }
+            else
+            {
+                foreach (var child in Children)
+                {
+                    if(child.WindowState == WindowState.Maximized)
+                    {
+                        ButtonsPanel.Visibility = Visibility.Visible;
+                        return;
+                    }
+                }
+            }
+
+            // If we got here, there are zero maxed MdiChild windows
+            ButtonsPanel.Visibility = Visibility.Collapsed;
+        }
+
         /////////////////////////////
         #endregion Events
         ///////////////////////////////////////////////////////////
 
 
 
-
-        
-
-
-
-
         ///////////////////////////////////////////////////////////
         #region Window Internal
         /////////////////////////////
-        
+
         protected MdiChild? FindTopmostWindow()
         {
             int topZ = -999;
@@ -501,7 +486,7 @@ namespace sbMDI.wpf
             var window = FindTopmostWindow();
             if(window is not null)
             {
-                Debug.WriteLine("ChooseNewActiveWindow selects " + window.Title);
+                //Debug.WriteLine("ChooseNewActiveWindow selects " + window.Title);
                 ActivateWindow(window);
             }
         }
@@ -509,7 +494,7 @@ namespace sbMDI.wpf
         // Avoids unnecessary code duplication
         private void ActivateWindow(MdiChild window)
         {
-            Debug.WriteLine("Activating " + window.Title);
+            //Debug.WriteLine("Activating " + window.Title);
             ActiveMdiChild = window;
             ReassignZIndex();
             ActiveMdiChild.BringIntoView();
@@ -536,9 +521,25 @@ namespace sbMDI.wpf
         protected void UpdateButtonsStatus()
         {
             bool enable = Children.Count > 0;
-            foreach (Control child in ButtonPanel.Children)
+            foreach (Control child in ButtonsPanel.Children)
             {
                 child.IsEnabled = enable;
+            }
+
+            if(Children.Count == 0)
+            {
+                ButtonsPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                foreach (var window in Children)
+                {
+                    if (window.WindowState == WindowState.Maximized)
+                    {
+                        ButtonsPanel.Visibility = Visibility.Visible;
+                        return;
+                    }
+                }
             }
         }
 

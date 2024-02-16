@@ -9,6 +9,21 @@ namespace sbMDI.wpf
     /// </summary>
     public class MdiContainerStandard : MdiContainerBase
     {
+        static MdiContainerStandard()
+        {
+            //Application.Current.Resources.MergedDictionaries.Add(
+            //    new ResourceDictionary
+            //    {
+            //        Source = new Uri(@"/sbMDI.wpf;component/ThemeDefault.xaml", UriKind.Relative)
+            //    });
+        }
+
+        public override void OnApplyTemplate()
+        {
+            base.OnApplyTemplate();
+            //int doNothing = 1;
+        }
+
         public MdiContainerStandard() : base()
         {
 
@@ -16,14 +31,14 @@ namespace sbMDI.wpf
 
         protected override void CreateContainerGrid()
         {
-            ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-            ContainerGrid.RowDefinitions.Add(new RowDefinition());
+            //ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+            //ContainerGrid.RowDefinitions.Add(new RowDefinition());
 
-            ContainerGrid.Children.Add(ButtonPanel);
-            Grid.SetRow(ButtonPanel, 0);
+            //ContainerGrid.Children.Add(ButtonsPanel);
+            //Grid.SetRow(ButtonsPanel, 0);
 
-            ContainerGrid.Children.Add(ClientArea);
-            Grid.SetRow(ClientArea, 1);
+            //ContainerGrid.Children.Add(ClientArea);
+            //Grid.SetRow(ClientArea, 1);
         }
 
         protected override void OnChildAdded(MdiChild window)

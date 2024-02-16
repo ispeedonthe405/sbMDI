@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -26,61 +27,122 @@ namespace sbMDI.wpf
     /// </summary>
     public class MdiContainerTabbed : MdiContainerBase
     {
-        private StackPanel MainPanel = 
-            new() 
-            { 
-                Orientation = Orientation.Vertical, 
+        private StackPanel MainPanel =
+            new()
+            {
+                Orientation = Orientation.Vertical,
                 VerticalAlignment = VerticalAlignment.Stretch,
                 HorizontalAlignment = HorizontalAlignment.Stretch,
             };
 
         private TabControl TabPanel = new();
+        private RowDefinition TabRow = new();
+        private double SingleTabRowHeight = 24;
+        private double NumberOfTabRows = 1;
         private ObservableCollection<WindowTabItem> TabItems = [];
 
-        private UInt32 _MaxTabWidth = 32;
-        public UInt32 MaxTabWidth
+        private double _MaxTabWidth = 130;
+        public double MaxTabWidth
         {
             get => _MaxTabWidth;
-            set
-            {
-                _MaxTabWidth = value;
-                OnPropertyChanged(nameof(MaxTabWidth));
-            }
+            //set => SetField(ref _MaxTabWidth, value, nameof(MaxTabWidth));
         }
-
-        private static GridLength _SingleTabPanelHeight = new(24, GridUnitType.Pixel);
-        public GridLength SingleTabPanelHeight
-        {
-            get => _SingleTabPanelHeight;
-            set 
-            {
-                _SingleTabPanelHeight = value;
-                OnPropertyChanged(nameof(SingleTabPanelHeight));
-            }
-        }
-
-        private Dock _TabStripPlacement = Dock.Bottom;
-        public Dock TabStripPlacement
-        {
-            get => _TabStripPlacement;
-            set
-            {
-                _TabStripPlacement = value;
-                TabPanel.TabStripPlacement = value;
-                OnPropertyChanged(nameof(TabStripPlacement));
-            }
-        }
-
-        private RowDefinition TabRow = new() { Height = _SingleTabPanelHeight };
+        
 
 
         public MdiContainerTabbed() : base()
         {
-            TabPanel.Height = 26;
-            TabPanel.ClipToBounds = false;
+            //ContainerGrid.SizeChanged += (s, e) => { RecalculateTabRow(); };
+        }
+
+        public override void OnApplyTemplate()
+        {
+            base.OnApplyTemplate();
+
+            TabPanel = (TabControl)Template.FindName("TabPanel", this);
+            TabPanel.ClipToBounds = true;
             TabPanel.ItemsSource = TabItems;
-            TabPanel.DisplayMemberPath = "Window.Title";
             TabPanel.SelectionChanged += TabPanel_SelectionChanged;
+            ContainerGrid.SizeChanged += (s, e) => RecalculateTabRow();
+            TabItems.CollectionChanged += TabItems_CollectionChanged;
+            TabRow = (RowDefinition)Template.FindName("TabRow", this);
+        }
+
+        /// <summary>
+        /// As tab count changes, or as the window changes size, recalculate the height of the grid row
+        /// to accomodate the tabs without clipping.
+        /// </summary>
+        private void RecalculateTabRow()
+        {
+            // Note: Tabs are assumed to be max width, because obtaining the actual tab
+            // header height requires one to jump through flaming hoops
+            double totalTabWidth = TabPanel.Items.Count * MaxTabWidth;
+            double panelWidth = ContainerGrid.ActualWidth;
+            double adjustedPanelSize = (NumberOfTabRows * panelWidth) - (NumberOfTabRows * MaxTabWidth);
+
+            // New row needed; add row height
+            if (totalTabWidth > adjustedPanelSize)
+            {
+                //while (totalTabWidth > adjustedPanelSize)
+                {
+                    NumberOfTabRows++;
+                    adjustedPanelSize = (NumberOfTabRows * panelWidth) - (NumberOfTabRows * MaxTabWidth);
+                    double newHeight = TabRow.Height.Value + SingleTabRowHeight;
+                    TabRow.Height = new(newHeight, GridUnitType.Pixel);
+                }
+            }
+
+            // extra row exists; subtract one row height
+            else if(totalTabWidth < NumberOfTabRows * panelWidth)
+            {
+                if (NumberOfTabRows > 1 && ((NumberOfTabRows * panelWidth) / totalTabWidth) > 2)
+                {
+                    NumberOfTabRows--;
+
+                    //Debug.WriteLine(string.Format("Subtracting a row: Row count = {0}", NumberOfTabRows));
+                    
+                    double newHeight = TabRow.Height.Value - SingleTabRowHeight;
+                    TabRow.Height = new(newHeight, GridUnitType.Pixel);
+                }
+            }
+        }
+
+        private void TabItems_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            // Fix all new tabs to max tab width
+            if (e.NewItems is not null && e.NewItems[0] is TabItem newTab)
+            {
+                newTab.MaxWidth = MaxTabWidth;
+            }
+
+            RecalculateTabRow();
+
+            //// As the tab count changes, make sure the grid row that contains the tabs
+            //// is the right height to accomodate them.
+            ////
+            //// Note: TabItem is not the actual tab header but the tab page content.
+            //// To get the actual tab width one must jump through flaming hoops;
+            //// therefore we assume all tab headers are at max width.
+            //double totalTabWidth = TabPanel.Items.Count * MaxTabWidth;
+
+            //// Tabs width exceeds cotainer width * rows; add a new row
+            //if(totalTabWidth >= (ContainerGrid.ActualWidth * NumberOfTabRows))
+            //{
+            //    NumberOfTabRows++;
+            //    double currentHeight = TabRow.Height.Value;
+            //    currentHeight += SingleTabRowHeight;
+            //    TabRow.Height = new(currentHeight, GridUnitType.Pixel);
+            //    return;
+            //}
+
+            //// Total rows height exceeds the space needed by at least one whole row; subtract a row
+            //double rowsNeeded = totalTabWidth / ContainerGrid.ActualWidth;
+            //double d = Math.Round(rowsNeeded, MidpointRounding.ToPositiveInfinity);
+            //if (d < 1) d = 1;
+            //double newHeight = SingleTabRowHeight * d;
+            //TabRow.Height = new(newHeight, GridUnitType.Pixel);
+            //NumberOfTabRows = d;
+
         }
 
         private void TabPanel_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -111,42 +173,42 @@ namespace sbMDI.wpf
 
         private void RecreateContentGrid()
         {
-            ContainerGrid.Children.Clear();
-            ContainerGrid.RowDefinitions.Clear();
-            ContainerGrid.ColumnDefinitions.Clear();
+            //ContainerGrid.Children.Clear();
+            //ContainerGrid.RowDefinitions.Clear();
+            //ContainerGrid.ColumnDefinitions.Clear();
 
-            switch (TabStripPlacement)
-            {
-                case Dock.Top:
-                    ContainerGrid.RowDefinitions.Add(TabRow);
-                    ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContainerGrid.RowDefinitions.Add(new RowDefinition());
+            //switch (TabStripPlacement)
+            //{
+            //    case Dock.Top:
+            //        ContainerGrid.RowDefinitions.Add(TabRow);
+            //        ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+            //        ContainerGrid.RowDefinitions.Add(new RowDefinition());
 
-                    ContainerGrid.Children.Add(TabPanel);
-                    Grid.SetRow(TabPanel, 0);
+            //        ContainerGrid.Children.Add(TabPanel);
+            //        Grid.SetRow(TabPanel, 0);
 
-                    ContainerGrid.Children.Add(ButtonPanel);
-                    Grid.SetRow(ButtonPanel, 1);
+            //        ContainerGrid.Children.Add(ButtonsPanel);
+            //        Grid.SetRow(ButtonsPanel, 1);
 
-                    ContainerGrid.Children.Add(ClientArea);
-                    Grid.SetRow(ClientArea, 2);
-                    break;
+            //        ContainerGrid.Children.Add(ClientArea);
+            //        Grid.SetRow(ClientArea, 2);
+            //        break;
 
-                case Dock.Bottom:
-                    ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
-                    ContainerGrid.RowDefinitions.Add(new RowDefinition());
-                    ContainerGrid.RowDefinitions.Add(TabRow);
+            //    case Dock.Bottom:
+            //        ContainerGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MdiData.ButtonPanelHeight, GridUnitType.Pixel) });
+            //        ContainerGrid.RowDefinitions.Add(new RowDefinition());
+            //        ContainerGrid.RowDefinitions.Add(TabRow);
 
-                    ContainerGrid.Children.Add(TabPanel);
-                    Grid.SetRow(TabPanel, 2);
+            //        ContainerGrid.Children.Add(TabPanel);
+            //        Grid.SetRow(TabPanel, 2);
 
-                    ContainerGrid.Children.Add(ButtonPanel);
-                    Grid.SetRow(ButtonPanel, 0);
+            //        ContainerGrid.Children.Add(ButtonsPanel);
+            //        Grid.SetRow(ButtonsPanel, 0);
 
-                    ContainerGrid.Children.Add(ClientArea);
-                    Grid.SetRow(ClientArea, 1);
-                    break;
-            }
+            //        ContainerGrid.Children.Add(ClientArea);
+            //        Grid.SetRow(ClientArea, 1);
+            //        break;
+            //}
         }
     
 
