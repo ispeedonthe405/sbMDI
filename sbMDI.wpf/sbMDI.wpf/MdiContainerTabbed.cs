@@ -52,7 +52,7 @@ namespace sbMDI.wpf
 
         public MdiContainerTabbed() : base()
         {
-            //ContainerGrid.SizeChanged += (s, e) => { RecalculateTabRow(); };
+            SizeChanged += (s, e) => { RecalculateTabRow(); };
         }
 
         public override void OnApplyTemplate()
