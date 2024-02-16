@@ -86,21 +86,21 @@ namespace sbMDI.wpf
                 //while (totalTabWidth > adjustedPanelSize)
                 {
                     NumberOfTabRows++;
-                    adjustedPanelSize = (NumberOfTabRows * panelWidth) - (NumberOfTabRows * MaxTabWidth);
+                    adjustedPanelSize = (NumberOfTabRows * ContainerGrid.ActualWidth) - (NumberOfTabRows * MaxTabWidth);
                     double newHeight = TabRow.Height.Value + SingleTabRowHeight;
                     TabRow.Height = new(newHeight, GridUnitType.Pixel);
                 }
             }
 
             // extra row exists; subtract one row height
-            else if(totalTabWidth < NumberOfTabRows * panelWidth)
+            else if(totalTabWidth < (NumberOfTabRows * panelWidth))
             {
-                if (NumberOfTabRows > 1 && ((NumberOfTabRows * panelWidth) / totalTabWidth) > 2)
+                while (NumberOfTabRows > 1 && (adjustedPanelSize / totalTabWidth) > 2)
                 {
                     NumberOfTabRows--;
-
+                    adjustedPanelSize = (NumberOfTabRows * ContainerGrid.ActualWidth) - (NumberOfTabRows * MaxTabWidth);
                     //Debug.WriteLine(string.Format("Subtracting a row: Row count = {0}", NumberOfTabRows));
-                    
+
                     double newHeight = TabRow.Height.Value - SingleTabRowHeight;
                     TabRow.Height = new(newHeight, GridUnitType.Pixel);
                 }
