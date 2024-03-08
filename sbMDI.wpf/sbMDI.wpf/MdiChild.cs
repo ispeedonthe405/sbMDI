@@ -13,7 +13,6 @@ namespace sbMDI.wpf
     {
         public MdiContainerBase Container { get; set; }
 
-
         ///////////////////////////////////////////////////////////
         #region Dependency Properties
         /////////////////////////////
@@ -22,10 +21,54 @@ namespace sbMDI.wpf
             DependencyProperty.Register("Content", typeof(UserControl), typeof(MdiChild),
                 new UIPropertyMetadata(new PropertyChangedCallback(ContentValueChanged)));
 
-        public new UserControl Content
+        public static readonly DependencyProperty WindowStateProperty =
+            DependencyProperty.Register("WindowState", typeof(WindowState), typeof(MdiChild),
+                new UIPropertyMetadata(WindowState.Maximized, new PropertyChangedCallback(WindowStateValueChanged)));
+
+        public static readonly DependencyProperty PositionProperty =
+            DependencyProperty.Register("Position", typeof(Point), typeof(MdiChild),
+                new UIPropertyMetadata(new Point(-1, -1), new PropertyChangedCallback(PositionValueChanged)));
+
+        public static readonly DependencyProperty TitleProperty =
+            DependencyProperty.Register("Title", typeof(string), typeof(MdiChild));
+
+        public static readonly DependencyProperty IconProperty =
+            DependencyProperty.Register("Icon", typeof(ImageSource), typeof(MdiChild));
+
+        public static readonly DependencyProperty ShowIconProperty =
+            DependencyProperty.Register("ShowIcon", typeof(bool), typeof(MdiChild),
+            new UIPropertyMetadata(true));
+
+        public static readonly DependencyProperty ResizableProperty =
+            DependencyProperty.Register("Resizable", typeof(bool), typeof(MdiChild),
+            new UIPropertyMetadata(true));
+
+        public static readonly DependencyProperty FocusedProperty =
+            DependencyProperty.Register("Focused", typeof(bool), typeof(MdiChild),
+            new UIPropertyMetadata(false, new PropertyChangedCallback(FocusedValueChanged)));
+
+        /////////////////////////////
+        #endregion Dependency Properties
+        ///////////////////////////////////////////////////////////
+
+
+
+        ///////////////////////////////////////////////////////////
+        #region Dependency Property Callbacks
+        /////////////////////////////
+
+        private static void PositionValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
-            get => (UserControl)GetValue(ContentProperty);
-            set => SetValue(ContentProperty, value);
+            if ((Point)e.NewValue == (Point)e.OldValue)
+            {
+                return;
+            }
+
+            MdiChild mdiChild = (MdiChild)sender;
+            Point newPosition = (Point)e.NewValue;
+
+            Canvas.SetTop(mdiChild, newPosition.Y < 0 ? 0 : newPosition.Y);
+            Canvas.SetLeft(mdiChild, newPosition.X < 0 ? 0 : newPosition.X);
         }
 
         private static void ContentValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -36,16 +79,6 @@ namespace sbMDI.wpf
             }
         }
 
-        public static readonly DependencyProperty WindowStateProperty =
-            DependencyProperty.Register("WindowState", typeof(WindowState), typeof(MdiChild),
-            new UIPropertyMetadata(WindowState.Maximized, new PropertyChangedCallback(WindowStateValueChanged)));
-
-        public WindowState WindowState
-        {
-            get => (WindowState)GetValue(WindowStateProperty);
-            set => SetValue(WindowStateProperty, value);
-        }
-
         private static void WindowStateValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is MdiChild window)
@@ -53,71 +86,6 @@ namespace sbMDI.wpf
                 window.ApplyWindowState();
                 window.WindowStateChanged?.Invoke(sender, new(window.WindowState));
             }            
-        }
-
-        public static readonly DependencyProperty PositionProperty =
-            DependencyProperty.Register("Position", typeof(Point), typeof(MdiChild),
-            new UIPropertyMetadata(new Point(-1, -1), new PropertyChangedCallback(PositionValueChanged)));
-
-        public Point Position
-        {
-            get => (Point)GetValue(PositionProperty);
-            set => SetValue(PositionProperty, value);
-        }
-
-        private static void PositionValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
-        {
-            //if ((Point)e.NewValue == (Point)e.OldValue)
-            //    return;
-
-            MdiChild mdiChild = (MdiChild)sender;
-            Point newPosition = (Point)e.NewValue;
-
-            Canvas.SetTop(mdiChild, newPosition.Y < 0 ? 0 : newPosition.Y);
-            Canvas.SetLeft(mdiChild, newPosition.X < 0 ? 0 : newPosition.X);
-        }
-
-		public static readonly DependencyProperty TitleProperty =
-            DependencyProperty.Register("Title", typeof(string), typeof(MdiChild));
-        public string Title
-        {
-            get => (string)GetValue(TitleProperty);
-            set => SetValue(TitleProperty, value);
-        }
-
-        public static readonly DependencyProperty IconProperty =
-            DependencyProperty.Register("Icon", typeof(ImageSource), typeof(MdiChild));
-        public ImageSource Icon
-        {
-            get => (ImageSource)GetValue(IconProperty);
-            set => SetValue(IconProperty, value);        
-        }
-
-        public static readonly DependencyProperty ShowIconProperty =
-            DependencyProperty.Register("ShowIcon", typeof(bool), typeof(MdiChild),
-            new UIPropertyMetadata(true));
-        public bool ShowIcon
-        {
-            get => (bool)GetValue(ShowIconProperty);
-            set => SetValue(ShowIconProperty, value);
-        }
-
-        public static readonly DependencyProperty ResizableProperty =
-            DependencyProperty.Register("Resizable", typeof(bool), typeof(MdiChild),
-            new UIPropertyMetadata(true));
-        public bool Resizable
-        {
-            get => (bool)GetValue(ResizableProperty);
-            set => SetValue(ResizableProperty, value);
-        }
-
-        public static readonly DependencyProperty FocusedProperty =
-            DependencyProperty.Register("Focused", typeof(bool), typeof(MdiChild),
-            new UIPropertyMetadata(false, new PropertyChangedCallback(FocusedValueChanged)));
-        public bool Focused
-        {
-            get => (bool)GetValue(FocusedProperty);
-            set => SetValue(FocusedProperty, value);
         }
 
         private static void FocusedValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
@@ -142,7 +110,7 @@ namespace sbMDI.wpf
         }
 
         /////////////////////////////
-        #endregion Dependency Properties
+        #endregion Dependency Property Callbacks
         ///////////////////////////////////////////////////////////
 
 
@@ -156,11 +124,57 @@ namespace sbMDI.wpf
         private Button? ButtonClose;
         private StackPanel? ButtonsPanel;
 
+        public new UserControl Content
+        {
+            get => (UserControl)GetValue(ContentProperty);
+            set => SetValue(ContentProperty, value);
+        }
+
+        public WindowState WindowState
+        {
+            get => (WindowState)GetValue(WindowStateProperty);
+            set => SetValue(WindowStateProperty, value);
+        }
+
+        public bool Focused
+        {
+            get => (bool)GetValue(FocusedProperty);
+            set => SetValue(FocusedProperty, value);
+        }
+
+        public bool Resizable
+        {
+            get => (bool)GetValue(ResizableProperty);
+            set => SetValue(ResizableProperty, value);
+        }
+
+        public bool ShowIcon
+        {
+            get => (bool)GetValue(ShowIconProperty);
+            set => SetValue(ShowIconProperty, value);
+        }
+
+        public ImageSource Icon
+        {
+            get => (ImageSource)GetValue(IconProperty);
+            set => SetValue(IconProperty, value);
+        }
+
+        public string Title
+        {
+            get => (string)GetValue(TitleProperty);
+            set => SetValue(TitleProperty, value);
+        }
+
+        public Point Position
+        {
+            get => (Point)GetValue(PositionProperty);
+            set => SetValue(PositionProperty, value);
+        }
 
         /////////////////////////////
         #endregion Properties
         ///////////////////////////////////////////////////////////
-
 
 
 
@@ -179,7 +193,6 @@ namespace sbMDI.wpf
         /////////////////////////////
         #endregion Events
         ///////////////////////////////////////////////////////////
-
 
 
 
@@ -368,11 +381,11 @@ namespace sbMDI.wpf
                 {
                     if (WindowState == WindowState.Minimized)
                     {
-                        //minimizeButton_Click(null, null);
+                        ButtonMinimize_Click(this, new RoutedEventArgs());
                     }
                     else if (WindowState == WindowState.Normal)
                     {
-                        //maximizeButton_Click(null, null);
+                        ButtonMaximize_Click(this, new RoutedEventArgs());
                     }
                 };
             }
