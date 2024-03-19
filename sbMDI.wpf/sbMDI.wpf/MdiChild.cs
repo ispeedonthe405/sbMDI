@@ -52,7 +52,6 @@ namespace sbMDI.wpf
         ///////////////////////////////////////////////////////////
 
 
-
         ///////////////////////////////////////////////////////////
         #region Dependency Property Callbacks
         /////////////////////////////
@@ -114,7 +113,6 @@ namespace sbMDI.wpf
         ///////////////////////////////////////////////////////////
 
 
-
         ///////////////////////////////////////////////////////////
         #region Properties
         /////////////////////////////
@@ -171,6 +169,9 @@ namespace sbMDI.wpf
             get => (Point)GetValue(PositionProperty);
             set => SetValue(PositionProperty, value);
         }
+
+        internal const int MinimizedWidth = 160;
+        internal const int MinimizedHeight = 29;
 
         /////////////////////////////
         #endregion Properties

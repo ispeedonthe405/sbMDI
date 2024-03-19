@@ -25,5 +25,32 @@ namespace Test
                 container?.NewChildWindow(title);
             }            
         }
+
+        private MdiContainerBase GetActiveContainer()
+        {
+            MdiContainerBase container = Standard;
+            if (MainTabs.SelectedItem == Tabbed) container = Tabbed;
+            return container;
+        }
+
+        private void btn_TileH_Click(object sender, RoutedEventArgs e)
+        {
+            GetActiveContainer().MdiLayout = eMdiLayout.TileHorizontal;
+        }
+
+        private void btn_TileV_Click(object sender, RoutedEventArgs e)
+        {
+            GetActiveContainer().MdiLayout = eMdiLayout.TileVertical;
+        }
+
+        private void btn_Cascade_Click(object sender, RoutedEventArgs e)
+        {
+            GetActiveContainer().MdiLayout = eMdiLayout.Cascade;
+        }
+
+        private void btn_Arrange_Click(object sender, RoutedEventArgs e)
+        {
+            GetActiveContainer().MdiLayout = eMdiLayout.ArrangeIcons;
+        }
     }
 }

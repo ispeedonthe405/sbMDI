@@ -19,13 +19,17 @@
 
         <StackPanel Grid.Row="0" Orientation="Horizontal">
             <Button x:Name="btn_NewChild" Margin="2,2,2,2" Content="New MDI Child" Click="btn_NewChild_Click"/>
+            <Button x:Name="btn_TileH" Margin="2,2,2,2" Content="TileH" Click="btn_TileH_Click"/>
+            <Button x:Name="btn_TileV" Margin="2,2,2,2" Content="TileV" Click="btn_TileV_Click"/>
+            <Button x:Name="btn_Cascade" Margin="2,2,2,2" Content="Cascade" Click="btn_Cascade_Click"/>
+            <Button x:Name="btn_Arrange" Margin="2,2,2,2" Content="Arrange" Click="btn_Arrange_Click"/>
         </StackPanel>
         
         <TabControl x:Name="MainTabs" Grid.Row="1">
-            <TabItem Header="Standard MDI">
+            <TabItem Header="Standard MDI" x:Name="StandardTab">
                 <mdi:MdiContainerStandard x:Name="Standard"/>
             </TabItem>
-            <TabItem Header="Tabbed MDI">
+            <TabItem Header="Tabbed MDI" x:Name="TabbedTab">
                 <mdi:MdiContainerTabbed x:Name="Tabbed"/>
             </TabItem>
         </TabControl>

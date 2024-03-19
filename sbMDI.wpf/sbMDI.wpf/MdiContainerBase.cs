@@ -12,75 +12,33 @@ namespace sbMDI.wpf
     /// The window-frame buttons are not drawn on the child windows.
     /// Instead, they're part of the container window.
     /// </summary>
-    public abstract class MdiContainerBase : UserControl, INotifyPropertyChanged
+    public abstract class MdiContainerBase : UserControl
     {
         ///////////////////////////////////////////////////////////
-        #region INotifyPropertyChanged
+        #region Dependency Properties
         /////////////////////////////
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        protected void SetField<TField>(ref TField field, TField value, string propertyName)
-        {
-            if (EqualityComparer<TField>.Default.Equals(field, value))
-            {
-                return;
-            }
-
-            field = value;
-            OnPropertyChanged(propertyName);
-        }
-
-        /////////////////////////////
-        #endregion INotifyPropertyChanged
-        ///////////////////////////////////////////////////////////
-
-
-
-        ///////////////////////////////////////////////////////////
-        #region Events / Actions
-        /////////////////////////////
-
-        public event Action<MdiChild, MdiChild>? ActiveChildChangedEvent;
-        
-        
-        /////////////////////////////
-        #endregion Events / Actions
-        ///////////////////////////////////////////////////////////
-
-
-
-        ///////////////////////////////////////////////////////////
-        #region Properties
-        /////////////////////////////
-
-        protected ObservableCollection<MdiChild> Children { get; } = [];
-
-        private Grid _ContainerGrid = new();
-        protected Grid ContainerGrid { get => _ContainerGrid; set => _ContainerGrid = value; }
-
-        private Canvas _ClientArea = new();
-        protected Canvas ClientArea { get => _ClientArea; set => _ClientArea = value; }
-
-        public double ClientAreaWidth { get => ClientArea.ActualWidth; }
-
-        public double ClientAreaHeight { get => ClientArea.ActualHeight; }
-
-        public Size ClientAreaSize { get => new(ClientAreaWidth, ClientAreaHeight); }
-        
         public static readonly DependencyProperty ActiveMdiChildProperty =
             DependencyProperty.Register("ActiveMdiChild", typeof(MdiChild), typeof(MdiContainerBase),
             new UIPropertyMetadata(null, new PropertyChangedCallback(ActiveMdiChildValueChanged)));
-        public MdiChild? ActiveMdiChild
-        {
-            get { return (MdiChild)GetValue(ActiveMdiChildProperty); }
-            internal set { SetValue(ActiveMdiChildProperty, value); }
-        }
+
+        public static readonly DependencyProperty ClientAreaProperty =
+            DependencyProperty.Register("ClientArea", typeof(Canvas), typeof(MdiContainerBase), 
+                new PropertyMetadata(null));
+
+        public static readonly DependencyProperty MdiLayoutProperty =
+            DependencyProperty.Register("MdiLayout", typeof(eMdiLayout), typeof(MdiContainerBase),
+            new UIPropertyMetadata(eMdiLayout.ArrangeIcons, new PropertyChangedCallback(MdiLayoutValueChanged)));
+
+        /////////////////////////////
+        #endregion Dependency Properties
+        ///////////////////////////////////////////////////////////
+
+
+        ///////////////////////////////////////////////////////////
+        #region Dependency Property Callbacks
+        /////////////////////////////
+
         private static void ActiveMdiChildValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             MdiContainerBase container = (MdiContainerBase)sender;
@@ -125,9 +83,202 @@ namespace sbMDI.wpf
             container.MdiChildTitleChanged?.Invoke(container, new RoutedEventArgs());
         }
 
-        public event RoutedEventHandler MdiChildTitleChanged;
+        private static void MdiLayoutValueChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+        {
+            MdiContainerBase mdiContainer = (MdiContainerBase)sender;
+            eMdiLayout value = (eMdiLayout)e.NewValue;
 
-        protected double WindowOffset = 10.0;
+            if (value == eMdiLayout.ArrangeIcons ||
+                mdiContainer.Children.Count < 1)
+                return;
+
+            // 1. WindowState.Maximized -> WindowState.Normal
+            List<MdiChild> minimizedWindows = new List<MdiChild>(),
+                normalWindows = new List<MdiChild>();
+            foreach (MdiChild mdiChild in mdiContainer.Children)
+                switch (mdiChild.WindowState)
+                {
+                    case WindowState.Minimized:
+                        minimizedWindows.Add(mdiChild);
+                        break;
+                    case WindowState.Maximized:
+                        mdiChild.WindowState = WindowState.Normal;
+                        normalWindows.Add(mdiChild);
+                        break;
+                    default:
+                        normalWindows.Add(mdiChild);
+                        break;
+                }
+
+            minimizedWindows.Sort(new MdiChildComparer());
+            normalWindows.Sort(new MdiChildComparer());
+
+            // 2. Arrange minimized windows
+            double containerHeight = mdiContainer.InnerHeight;
+            for (int i = 0; i < minimizedWindows.Count; i++)
+            {
+                MdiChild mdiChild = minimizedWindows[i];
+                int capacity = Convert.ToInt32(mdiContainer.ActualWidth) / MdiChild.MinimizedWidth,
+                    row = i / capacity + 1,
+                    col = i % capacity;
+                containerHeight = mdiContainer.InnerHeight - MdiChild.MinimizedHeight * row;
+                double newLeft = MdiChild.MinimizedWidth * col;
+                mdiChild.Position = new Point(newLeft, containerHeight);
+            }
+
+            // 3. Resize & arrange normal windows
+            switch (value)
+            {
+                case eMdiLayout.Cascade:
+                    {
+                        double newWidth = mdiContainer.ActualWidth * 0.58, // should be non-linear formula here
+                            newHeight = containerHeight * 0.67,
+                            windowOffset = 0;
+                        foreach (MdiChild mdiChild in normalWindows)
+                        {
+                            if (mdiChild.Resizable)
+                            {
+                                mdiChild.Width = newWidth;
+                                mdiChild.Height = newHeight;
+                            }
+                            mdiChild.Position = new Point(windowOffset, windowOffset);
+
+                            windowOffset += WindowOffset;
+                            if (windowOffset + mdiChild.Width > mdiContainer.ActualWidth)
+                                windowOffset = 0;
+                            if (windowOffset + mdiChild.Height > containerHeight)
+                                windowOffset = 0;
+                        }
+                    }
+                    break;
+                case eMdiLayout.TileHorizontal:
+                    {
+                        int cols = (int)Math.Sqrt(normalWindows.Count),
+                            rows = normalWindows.Count / cols;
+
+                        List<int> col_count = new List<int>(); // windows per column
+                        for (int i = 0; i < cols; i++)
+                        {
+                            if (normalWindows.Count % cols > cols - i - 1)
+                                col_count.Add(rows + 1);
+                            else
+                                col_count.Add(rows);
+                        }
+
+                        double newWidth = mdiContainer.ActualWidth / cols,
+                            newHeight = containerHeight / col_count[0],
+                            offsetTop = 0,
+                            offsetLeft = 0;
+
+                        for (int i = 0, col_index = 0, prev_count = 0; i < normalWindows.Count; i++)
+                        {
+                            if (i >= prev_count + col_count[col_index])
+                            {
+                                prev_count += col_count[col_index++];
+                                offsetLeft += newWidth;
+                                offsetTop = 0;
+                                newHeight = containerHeight / col_count[col_index];
+                            }
+
+                            MdiChild mdiChild = normalWindows[i];
+                            if (mdiChild.Resizable)
+                            {
+                                mdiChild.Width = newWidth;
+                                mdiChild.Height = newHeight;
+                            }
+                            mdiChild.Position = new Point(offsetLeft, offsetTop);
+                            offsetTop += newHeight;
+                        }
+                    }
+                    break;
+                case eMdiLayout.TileVertical:
+                    {
+                        int rows = (int)Math.Sqrt(normalWindows.Count),
+                            cols = normalWindows.Count / rows;
+
+                        List<int> col_count = new List<int>(); // windows per column
+                        for (int i = 0; i < cols; i++)
+                        {
+                            if (normalWindows.Count % cols > cols - i - 1)
+                                col_count.Add(rows + 1);
+                            else
+                                col_count.Add(rows);
+                        }
+
+                        double newWidth = mdiContainer.ActualWidth / cols,
+                            newHeight = containerHeight / col_count[0],
+                            offsetTop = 0,
+                            offsetLeft = 0;
+
+                        for (int i = 0, col_index = 0, prev_count = 0; i < normalWindows.Count; i++)
+                        {
+                            if (i >= prev_count + col_count[col_index])
+                            {
+                                prev_count += col_count[col_index++];
+                                offsetLeft += newWidth;
+                                offsetTop = 0;
+                                newHeight = containerHeight / col_count[col_index];
+                            }
+
+                            MdiChild mdiChild = normalWindows[i];
+                            if (mdiChild.Resizable)
+                            {
+                                mdiChild.Width = newWidth;
+                                mdiChild.Height = newHeight;
+                            }
+                            mdiChild.Position = new Point(offsetLeft, offsetTop);
+                            offsetTop += newHeight;
+                        }
+                    }
+                    break;
+            }
+            mdiContainer.MdiLayout = eMdiLayout.ArrangeIcons;
+        }
+
+        /////////////////////////////
+        #endregion Dependency Property Callbacks
+        ///////////////////////////////////////////////////////////
+
+
+        ///////////////////////////////////////////////////////////
+        #region Properties
+        /////////////////////////////
+
+        public MdiChild? ActiveMdiChild
+        {
+            get { return (MdiChild)GetValue(ActiveMdiChildProperty); }
+            internal set { SetValue(ActiveMdiChildProperty, value); }
+        }
+
+        public Canvas ClientArea
+        {
+            get { return (Canvas)GetValue(ClientAreaProperty); }
+            set { SetValue(ClientAreaProperty, value); }
+        }
+
+        public eMdiLayout MdiLayout
+        {
+            get { return (eMdiLayout)GetValue(MdiLayoutProperty); }
+            set { SetValue(MdiLayoutProperty, value); }
+        }
+
+        internal double InnerHeight
+        {
+            get { return ActualHeight - ClientArea.ActualHeight; }
+        }
+
+        protected ObservableCollection<MdiChild> Children { get; } = [];
+
+        private Grid _ContainerGrid = new();
+        protected Grid ContainerGrid { get => _ContainerGrid; set => _ContainerGrid = value; }
+
+        public double ClientAreaWidth { get => ClientArea.ActualWidth; }
+
+        public double ClientAreaHeight { get => ClientArea.ActualHeight; }
+
+        public Size ClientAreaSize { get => new(ClientAreaWidth, ClientAreaHeight); }
+
+        protected static double WindowOffset = 10.0;
 
         protected StackPanel ButtonsPanel = new();
         protected Button ButtonClose = new();
@@ -139,12 +290,22 @@ namespace sbMDI.wpf
         ///////////////////////////////////////////////////////////
 
 
+        ///////////////////////////////////////////////////////////
+        #region Events / Actions
+        /////////////////////////////
+
+        public event Action<MdiChild, MdiChild>? ActiveChildChangedEvent;
+        public event RoutedEventHandler MdiChildTitleChanged;
+
+        /////////////////////////////
+        #endregion Events / Actions
+        ///////////////////////////////////////////////////////////
 
 
         ///////////////////////////////////////////////////////////
         #region Construction & Init
         /////////////////////////////
-        
+
         static MdiContainerBase()
         {
             Application.Current.Resources.MergedDictionaries.Add(
@@ -156,6 +317,8 @@ namespace sbMDI.wpf
 
         public MdiContainerBase()
         {
+            ClientArea = new Canvas();
+
             Children.CollectionChanged += Children_CollectionChanged;
             SizeChanged += MdiContainerBase_SizeChanged;
             Loaded += MdiContainerBase_Loaded;
@@ -187,8 +350,6 @@ namespace sbMDI.wpf
         /////////////////////////////
         #endregion Construction & Init
         ///////////////////////////////////////////////////////////
-
-
 
 
         ///////////////////////////////////////////////////////////
@@ -284,9 +445,7 @@ namespace sbMDI.wpf
         /////////////////////////////6
         #endregion Window Interface
         ///////////////////////////////////////////////////////////
-        
-
-
+    
 
         ///////////////////////////////////////////////////////////
         #region Abstracts
@@ -313,8 +472,6 @@ namespace sbMDI.wpf
         /////////////////////////////
         #endregion Abstracts
         ///////////////////////////////////////////////////////////
-        
-
 
 
         ///////////////////////////////////////////////////////////
@@ -454,7 +611,6 @@ namespace sbMDI.wpf
         ///////////////////////////////////////////////////////////
 
 
-
         ///////////////////////////////////////////////////////////
         #region Window Internal
         /////////////////////////////
@@ -543,10 +699,17 @@ namespace sbMDI.wpf
             }
         }
 
+        internal class MdiChildComparer : IComparer<MdiChild>
+        {
+            public int Compare(MdiChild? x, MdiChild? y)
+            {
+                return -1 * Canvas.GetZIndex(x).CompareTo(Canvas.GetZIndex(y));
+            }
+        }
+
         /////////////////////////////
         #endregion Window Internal
         ///////////////////////////////////////////////////////////
-        
     }
 }
 
